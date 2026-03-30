@@ -79,3 +79,75 @@ h3 { font-size: 24px; color: #cbd5e1; margin-bottom: 20px; }
 .controls { display: flex; justify-content: space-between; margin-top: 30px; }
 .btn-nav { background: #334155; color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 16px; cursor: pointer; flex: 1; margin: 0 5px; }
 .btn-nav:active { background: #475569; }
+
+/* TRẮC NGHIỆM (QUIZ) STYLES - BẢN NÂNG CẤP DI ĐỘNG */
+.quiz-card {
+    background: linear-gradient(145deg, #1e293b, #0f172a); /* Hiệu ứng dải màu gradient */
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* Đổ bóng sâu hơn */
+    padding: 30px 20px;
+    border-radius: 24px; /* Bo góc to hơn cho mobile */
+    display: flex; flex-direction: column; justify-content: center; position: relative;
+}
+
+#quiz-question {
+    font-size: 28px;
+    font-weight: 800;
+    color: #f8fafc;
+    text-align: center;
+    margin-bottom: 25px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.options-grid {
+    display: flex; flex-direction: column; gap: 12px; margin-top: 10px; width: 100%;
+}
+
+.btn-option {
+    background: rgba(51, 65, 85, 0.7);
+    color: #e2e8f0;
+    border: 2px solid rgba(255, 255, 255, 0.05);
+    padding: 16px;
+    border-radius: 16px; /* Bo góc mềm mại */
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer; text-align: center;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); /* Hiệu ứng chuyển động mượt */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* Hiệu ứng khi chạm/nhấn trên điện thoại */
+.btn-option:active:not(:disabled) {
+    transform: scale(0.96);
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38bdf8;
+}
+
+/* Trạng thái đúng/sai nổi bật hơn */
+.btn-option.correct {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-color: #34d399;
+    color: white;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+}
+
+.btn-option.wrong {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border-color: #f87171;
+    color: white;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
+.btn-option:disabled { cursor: not-allowed; opacity: 0.95; }
+
+/* Nút Tiếp tục cho Quiz */
+#btn-quiz-next {
+    background: linear-gradient(135deg, #38bdf8, #2563eb);
+    border-radius: 16px;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: bold;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+    transition: all 0.2s;
+}
+#btn-quiz-next:active { transform: scale(0.97); }

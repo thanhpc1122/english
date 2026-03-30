@@ -24,7 +24,64 @@ let vocabData = {};
 let currentSessionWords = [];
 let currentIndex = 0;
 const WORDS_PER_DAY = 100;
+// --- Element mới cho Quiz ---
+const screenQuiz = document.getElementById('quiz-screen');
+const modeSelect = document.getElementById('mode-select');
+const elQuizProgress = document.getElementById('quiz-progress-text');
+const elQuizId = document.getElementById('quiz-id');
+const elQuizQuestion = document.getElementById('quiz-question');
+const elQuizOptions = document.getElementById('quiz-options');
+const btnQuizNext = document.getElementById('btn-quiz-next');
 
+// Biến cho Quiz & IndexedDB
+let currentMode = 'flashcard'; // flashcard, quiz_en_vi, quiz_vi_en
+let currentQuizCorrect = null;
+const DB_NAME = "VocabOfflineDB";
+
+// ==========================================
+// 0. INDEXEDDB: TỰ ĐỘNG LƯU & TẢI DATABASE
+// ==========================================
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+            if (!e.target.result.objectStoreNames.contains('files')) {
+                e.target.result.createObjectStore('files');
+            }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function loadDBFromLocal() {
+    try {
+        const db = await openDB();
+        const tx = db.transaction('files', 'readonly');
+        const req = tx.objectStore('files').get('sqlite_db');
+        req.onsuccess = async () => {
+            if (req.result) {
+                dbStatus.textContent = "Đang tải dữ liệu đã lưu...";
+                const sqlPromise = initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}` });
+                const SQL = await sqlPromise;
+                const sqliteDb = new SQL.Database(new Uint8Array(req.result));
+                const res = sqliteDb.exec("SELECT word, part_of_speech, meaning, ipa_us, examples FROM vocabulary ORDER BY word COLLATE NOCASE ASC");
+                if (res.length > 0) {
+                    parseDatabaseToWebFormat(res[0].values);
+                    dbStatus.textContent = "✅ Tải thành công từ bộ nhớ!";
+                    setTimeout(initSetupScreen, 500);
+                }
+            }
+        };
+    } catch (e) { console.log("Chưa có DB lưu trữ."); }
+}
+document.addEventListener("DOMContentLoaded", loadDBFromLocal);
+
+// Thêm sự kiện nút Toàn màn hình
+document.getElementById('btn-fullscreen').addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(err => {});
+    else document.exitFullscreen();
+});
 // ==========================================
 // 1. ĐỌC FILE DATABASE SQLITE BẰNG SQL.JS
 // ==========================================
@@ -44,6 +101,14 @@ dbUpload.addEventListener('change', async (e) => {
         const dataPromise = file.arrayBuffer();
 
         const [SQL, buf] = await Promise.all([sqlPromise, dataPromise]);
+
+        // --- DÒNG CODE MỚI ĐƯỢC THÊM VÀO ĐỂ LƯU FILE ---
+        try {
+            const idb = await openDB();
+            const tx = idb.transaction('files', 'readwrite');
+            tx.objectStore('files').put(buf, 'sqlite_db');
+        } catch(err) { console.error("Lỗi lưu DB:", err); }
+        // ----------------------------------------------
 
         // Load DB vào bộ nhớ
         const db = new SQL.Database(new Uint8Array(buf));
@@ -116,10 +181,12 @@ document.getElementById('btn-start').addEventListener('click', () => {
     const day = daySelect.value;
     const start = parseInt(inputStart.value) || 1;
     const end = parseInt(inputEnd.value) || 10;
+    currentMode = modeSelect.value;
 
     localStorage.setItem('learn_day', day);
     localStorage.setItem('learn_start', start);
     localStorage.setItem('learn_end', end);
+    localStorage.setItem('learn_mode', currentMode); // Lưu thêm chế độ học
 
     const dayData = vocabData[day] || [];
     currentSessionWords = dayData.slice(start - 1, end);
@@ -131,8 +198,14 @@ document.getElementById('btn-start').addEventListener('click', () => {
 
     currentIndex = 0;
     screenSetup.classList.remove('active');
-    screenCard.classList.add('active');
-    renderCard();
+
+    if (currentMode === 'flashcard') {
+        screenCard.classList.add('active');
+        renderCard();
+    } else {
+        screenQuiz.classList.add('active');
+        renderQuiz();
+    }
 });
 
 document.getElementById('btn-back').addEventListener('click', () => {
@@ -180,4 +253,84 @@ document.getElementById('btn-speak').addEventListener('click', () => {
     const utterance = new SpeechSynthesisUtterance(wordObj.word);
     utterance.lang = 'en-US'; utterance.rate = 0.9;
     window.speechSynthesis.speak(utterance);
+});
+
+// ==========================================
+// 3. LOGIC TRẮC NGHIỆM (QUIZ)
+// ==========================================
+document.getElementById('btn-quiz-back').addEventListener('click', () => {
+    screenQuiz.classList.remove('active');
+    screenSetup.classList.add('active');
+});
+
+function renderQuiz() {
+    btnQuizNext.style.display = 'none';
+    const wordObj = currentSessionWords[currentIndex];
+    elQuizProgress.textContent = `${currentIndex + 1} / ${currentSessionWords.length}`;
+    elQuizId.textContent = `Day ${daySelect.value} #${wordObj.id}`;
+
+    let questionText, correctText;
+    if (currentMode === 'quiz_en_vi') {
+        questionText = `${wordObj.word} ${wordObj.pos ? `(${wordObj.pos})` : ''}`;
+        correctText = wordObj.meaning;
+    } else {
+        questionText = wordObj.meaning;
+        correctText = wordObj.word;
+    }
+
+    elQuizQuestion.textContent = questionText;
+    currentQuizCorrect = correctText;
+
+    // Sinh 3 đáp án sai ngẫu nhiên từ toàn bộ ngày hiện tại
+    const currentDayData = vocabData[daySelect.value];
+    let distractors = [];
+    while (distractors.length < 3 && distractors.length < currentDayData.length - 1) {
+        const randomWord = currentDayData[Math.floor(Math.random() * currentDayData.length)];
+        const distractorText = currentMode === 'quiz_en_vi' ? randomWord.meaning : randomWord.word;
+        if (distractorText !== correctText && !distractors.includes(distractorText)) {
+            distractors.push(distractorText);
+        }
+    }
+
+    // Trộn đáp án
+    const options = [correctText, ...distractors];
+    options.sort(() => Math.random() - 0.5);
+
+    // Render nút
+    elQuizOptions.innerHTML = "";
+    options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-option';
+        btn.textContent = opt;
+        btn.addEventListener('click', () => handleQuizAnswer(btn, opt === correctText));
+        elQuizOptions.appendChild(btn);
+    });
+}
+
+function handleQuizAnswer(clickedBtn, isCorrect) {
+    // Khóa tất cả các nút
+    const allBtns = elQuizOptions.querySelectorAll('.btn-option');
+    allBtns.forEach(btn => {
+        btn.disabled = true;
+        if (btn.textContent === currentQuizCorrect) {
+            btn.classList.add('correct'); // Luôn hiện đáp án đúng
+        }
+    });
+
+    if (!isCorrect) {
+        clickedBtn.classList.add('wrong');
+    }
+
+    btnQuizNext.style.display = 'block';
+}
+
+btnQuizNext.addEventListener('click', () => {
+    if (currentIndex < currentSessionWords.length - 1) {
+        currentIndex++;
+        renderQuiz();
+    } else {
+        alert("🎉 Chúc mừng bạn đã hoàn thành bài kiểm tra!");
+        screenQuiz.classList.remove('active');
+        screenSetup.classList.add('active');
+    }
 });
