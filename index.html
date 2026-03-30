@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,12 +13,15 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
 </head>
+
 <body>
     <div id="db-screen" class="screen active">
         <h1>📦 Nạp Dữ Liệu</h1>
         <div class="card setup-card">
-            <p style="text-align: center; color: #94a3b8;">Hãy chọn file <b>english_system.db</b> từ điện thoại / máy tính của bạn để bắt đầu.</p>
-            <input type="file" id="db-upload" accept=".db,.sqlite,.sqlite3" style="padding: 10px; background: #334155; color: white;">
+            <p style="text-align: center; color: #94a3b8;">Hãy chọn file <b>english_system.db</b> từ điện thoại / máy
+                tính của bạn để bắt đầu.</p>
+            <input type="file" id="db-upload" accept=".db,.sqlite,.sqlite3"
+                style="padding: 10px; background: #334155; color: white;">
             <p id="db-status" style="text-align: center; color: #fbbf24; font-weight: bold;"></p>
         </div>
     </div>
@@ -44,7 +48,10 @@
                 <option value="quiz_en_vi">📝 KT: Anh ➔ Việt</option>
                 <option value="quiz_vi_en">📝 KT: Việt ➔ Anh</option>
             </select>
-
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #f8fafc;">
+                <input type="checkbox" id="shuffle-checkbox" style="width: 20px; height: 20px;">
+                🔀 Đảo trộn từ vựng ngẫu nhiên
+            </label>
             <button id="btn-start" class="btn-primary">BẮT ĐẦU</button>
         </div>
     </div>
@@ -61,11 +68,12 @@
                     <div id="card-id" class="badge">Day #</div>
                     <h2 id="card-word">Word</h2>
                     <p id="card-pos" class="pos-text">(pos)</p>
+                    <p id="card-ipa" class="ipa-text" style="color: #94a3b8; font-size: 16px; margin-top: 5px;">/ipa/
+                    </p>
                     <button id="btn-speak" class="btn-icon">🔊</button>
                     <p class="hint-text">Chạm để lật thẻ</p>
                 </div>
                 <div class="card-face back">
-                    <p id="card-ipa" class="ipa-text">/ipa/</p>
                     <h3 id="card-meaning">Ý nghĩa</h3>
                     <div id="card-examples" class="examples-box"></div>
                 </div>
@@ -89,7 +97,7 @@
                 <div id="quiz-id" class="badge">Day #</div>
                 <h2 id="quiz-question" style="margin-top: 30px;">Question</h2>
                 <div id="quiz-options" class="options-grid">
-                    </div>
+                </div>
             </div>
         </div>
 
@@ -100,4 +108,5 @@
 
     <script src="app.js"></script>
 </body>
+
 </html>

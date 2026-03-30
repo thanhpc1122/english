@@ -27,6 +27,7 @@ const WORDS_PER_DAY = 100;
 // --- Element mới cho Quiz ---
 const screenQuiz = document.getElementById('quiz-screen');
 const modeSelect = document.getElementById('mode-select');
+const checkboxShuffle = document.getElementById('shuffle-checkbox');
 const elQuizProgress = document.getElementById('quiz-progress-text');
 const elQuizId = document.getElementById('quiz-id');
 const elQuizQuestion = document.getElementById('quiz-question');
@@ -175,9 +176,16 @@ function initSetupScreen() {
     if (savedDay && vocabData[savedDay]) daySelect.value = savedDay;
     inputStart.value = savedStart || 1;
     inputEnd.value = savedEnd || 10;
+    if (localStorage.getItem('learn_shuffle') === 'true') checkboxShuffle.checked = true;
+
 }
 
 document.getElementById('btn-start').addEventListener('click', () => {
+    // Tự động bật Toàn màn hình khi người dùng nhấn Bắt đầu
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => console.log("Không thể tự động fullscreen"));
+    }
+
     const day = daySelect.value;
     const start = parseInt(inputStart.value) || 1;
     const end = parseInt(inputEnd.value) || 10;
@@ -186,10 +194,17 @@ document.getElementById('btn-start').addEventListener('click', () => {
     localStorage.setItem('learn_day', day);
     localStorage.setItem('learn_start', start);
     localStorage.setItem('learn_end', end);
-    localStorage.setItem('learn_mode', currentMode); // Lưu thêm chế độ học
+    localStorage.setItem('learn_mode', currentMode);
+    localStorage.setItem('learn_shuffle', checkboxShuffle.checked); // Lưu trạng thái đảo
 
     const dayData = vocabData[day] || [];
+    // Cắt mảng theo phạm vi
     currentSessionWords = dayData.slice(start - 1, end);
+
+    // Xử lý đảo ngẫu nhiên nếu được tick
+    if (checkboxShuffle.checked) {
+        currentSessionWords.sort(() => Math.random() - 0.5);
+    }
 
     if (currentSessionWords.length === 0) {
         alert("Phạm vi không hợp lệ! Vui lòng chọn lại.");
@@ -231,7 +246,7 @@ function renderCard() {
 
     elExamples.innerHTML = "";
     if (wordObj.examples && wordObj.examples.length > 0) {
-        wordObj.examples.slice(0, 3).forEach(ex => {
+        wordObj.examples.forEach(ex => {
             const p = document.createElement('p');
             p.textContent = ex;
             elExamples.appendChild(p);
@@ -264,7 +279,6 @@ document.getElementById('btn-quiz-back').addEventListener('click', () => {
 });
 
 function renderQuiz() {
-    btnQuizNext.style.display = 'none';
     const wordObj = currentSessionWords[currentIndex];
     elQuizProgress.textContent = `${currentIndex + 1} / ${currentSessionWords.length}`;
     elQuizId.textContent = `Day ${daySelect.value} #${wordObj.id}`;
@@ -321,7 +335,17 @@ function handleQuizAnswer(clickedBtn, isCorrect) {
         clickedBtn.classList.add('wrong');
     }
 
-    btnQuizNext.style.display = 'block';
+    // Tự động chuyển câu sau 0.7 giây (700ms)
+    setTimeout(() => {
+        if (currentIndex < currentSessionWords.length - 1) {
+            currentIndex++;
+            renderQuiz();
+        } else {
+            alert("🎉 Chúc mừng bạn đã hoàn thành bài kiểm tra!");
+            screenQuiz.classList.remove('active');
+            screenSetup.classList.add('active');
+        }
+    }, 700);
 }
 
 btnQuizNext.addEventListener('click', () => {
