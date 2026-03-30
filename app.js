@@ -31,12 +31,15 @@ const checkboxShuffle = document.getElementById('shuffle-checkbox');
 const elQuizProgress = document.getElementById('quiz-progress-text');
 const elQuizId = document.getElementById('quiz-id');
 const elQuizQuestion = document.getElementById('quiz-question');
+const elQuizIpa = document.getElementById('quiz-ipa');
 const elQuizOptions = document.getElementById('quiz-options');
 const btnQuizNext = document.getElementById('btn-quiz-next');
 
 // Biến cho Quiz & IndexedDB
-let currentMode = 'flashcard'; // flashcard, quiz_en_vi, quiz_vi_en
+// Biến cho Quiz & IndexedDB
+let currentMode = 'flashcard';
 let currentQuizCorrect = null;
+let correctAnswersCount = 0; // Biến mới để lưu số câu đúng
 const DB_NAME = "VocabOfflineDB";
 
 // ==========================================
@@ -195,13 +198,11 @@ document.getElementById('btn-start').addEventListener('click', () => {
     localStorage.setItem('learn_start', start);
     localStorage.setItem('learn_end', end);
     localStorage.setItem('learn_mode', currentMode);
-    localStorage.setItem('learn_shuffle', checkboxShuffle.checked); // Lưu trạng thái đảo
+    localStorage.setItem('learn_shuffle', checkboxShuffle.checked);
 
     const dayData = vocabData[day] || [];
-    // Cắt mảng theo phạm vi
     currentSessionWords = dayData.slice(start - 1, end);
 
-    // Xử lý đảo ngẫu nhiên nếu được tick
     if (checkboxShuffle.checked) {
         currentSessionWords.sort(() => Math.random() - 0.5);
     }
@@ -212,6 +213,7 @@ document.getElementById('btn-start').addEventListener('click', () => {
     }
 
     currentIndex = 0;
+    correctAnswersCount = 0; // Đặt lại điểm số về 0 mỗi khi làm bài mới
     screenSetup.classList.remove('active');
 
     if (currentMode === 'flashcard') {
@@ -283,16 +285,22 @@ function renderQuiz() {
     elQuizProgress.textContent = `${currentIndex + 1} / ${currentSessionWords.length}`;
     elQuizId.textContent = `Day ${daySelect.value} #${wordObj.id}`;
 
-    let questionText, correctText;
+    let questionText, correctText, ipaText = "";
     if (currentMode === 'quiz_en_vi') {
         questionText = `${wordObj.word} ${wordObj.pos ? `(${wordObj.pos})` : ''}`;
         correctText = wordObj.meaning;
+        ipaText = wordObj.ipa ? `/${wordObj.ipa.replace(/\//g, '')}/` : "";
     } else {
         questionText = wordObj.meaning;
         correctText = wordObj.word;
+        // Chế độ Việt-Anh thì không hiện IPA ở câu hỏi
     }
 
     elQuizQuestion.textContent = questionText;
+    elQuizIpa.textContent = ipaText;
+
+    // Ẩn hoàn toàn thẻ IPA nếu không có dữ liệu để tránh chiếm khoảng trống
+    elQuizIpa.style.display = ipaText ? 'block' : 'none';
     currentQuizCorrect = correctText;
 
     // Sinh 3 đáp án sai ngẫu nhiên từ toàn bộ ngày hiện tại
@@ -321,6 +329,7 @@ function renderQuiz() {
     });
 }
 
+// Hàm xử lý khi chọn đáp án
 function handleQuizAnswer(clickedBtn, isCorrect) {
     // Khóa tất cả các nút
     const allBtns = elQuizOptions.querySelectorAll('.btn-option');
@@ -331,7 +340,10 @@ function handleQuizAnswer(clickedBtn, isCorrect) {
         }
     });
 
-    if (!isCorrect) {
+    // Xử lý cộng điểm hoặc hiện màu sai
+    if (isCorrect) {
+        correctAnswersCount++;
+    } else {
         clickedBtn.classList.add('wrong');
     }
 
@@ -341,20 +353,38 @@ function handleQuizAnswer(clickedBtn, isCorrect) {
             currentIndex++;
             renderQuiz();
         } else {
-            alert("🎉 Chúc mừng bạn đã hoàn thành bài kiểm tra!");
-            screenQuiz.classList.remove('active');
-            screenSetup.classList.add('active');
+            // Hiển thị thông báo bảng điểm Custom thay vì dùng alert()
+            const total = currentSessionWords.length;
+            const wrongCount = total - correctAnswersCount;
+            showCustomAlert(correctAnswersCount, total, wrongCount);
         }
     }, 700);
 }
 
-btnQuizNext.addEventListener('click', () => {
-    if (currentIndex < currentSessionWords.length - 1) {
-        currentIndex++;
-        renderQuiz();
-    } else {
-        alert("🎉 Chúc mừng bạn đã hoàn thành bài kiểm tra!");
+// Hàm tạo Bảng thông báo điểm số tuyệt đẹp (Không làm văng Fullscreen)
+function showCustomAlert(correct, total, wrong) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:flex;justify-content:center;align-items:center;z-index:9999;";
+
+    const box = document.createElement('div');
+    box.style.cssText = "background:#1e293b;padding:30px;border-radius:24px;text-align:center;color:white;width:80%;max-width:350px;box-shadow:0 10px 40px rgba(0,0,0,0.7);border:1px solid #334155;";
+
+    box.innerHTML = `
+        <h2 style="margin-top:0;color:#38bdf8;font-size:28px;">🎉 Hoàn thành!</h2>
+        <div style="background:#0f172a;padding:15px;border-radius:15px;margin:20px 0;">
+            <p style="font-size:18px;margin:10px 0;font-weight:bold;">✅ Số câu đúng: <span style="color:#10b981;font-size:22px;">${correct}</span> <span style="color:#94a3b8;font-size:16px;">/ ${total}</span></p>
+            <p style="font-size:18px;margin:10px 0;font-weight:bold;">❌ Số câu sai: <span style="color:#ef4444;font-size:22px;">${wrong}</span></p>
+        </div>
+        <button id="btn-close-modal" style="background:linear-gradient(135deg, #38bdf8, #2563eb);color:white;border:none;padding:15px;border-radius:12px;font-size:18px;font-weight:bold;cursor:pointer;width:100%;transition:all 0.2s;">Tiếp tục học ▶</button>
+    `;
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    // Sự kiện đóng bảng điểm
+    document.getElementById('btn-close-modal').addEventListener('click', () => {
+        document.body.removeChild(overlay);
         screenQuiz.classList.remove('active');
         screenSetup.classList.add('active');
-    }
-});
+    });
+}
