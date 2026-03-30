@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Flashcard Offline</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+</head>
+<body>
+    <div id="db-screen" class="screen active">
+        <h1>📦 Nạp Dữ Liệu</h1>
+        <div class="card setup-card">
+            <p style="text-align: center; color: #94a3b8;">Hãy chọn file <b>english_system.db</b> từ điện thoại / máy tính của bạn để bắt đầu.</p>
+            <input type="file" id="db-upload" accept=".db,.sqlite,.sqlite3" style="padding: 10px; background: #334155; color: white;">
+            <p id="db-status" style="text-align: center; color: #fbbf24; font-weight: bold;"></p>
+        </div>
+    </div>
+
+    <div id="setup-screen" class="screen">
+        <h1>🚀 Cấu Hình Flashcard</h1>
+        <div class="card setup-card">
+            <label>1. Chọn Day:</label>
+            <select id="day-select"></select>
+
+            <label>2. Phạm vi từ (A - B):</label>
+            <div class="range-inputs">
+                <input type="number" id="start-index" min="1" max="100" placeholder="Từ số">
+                <span> - </span>
+                <input type="number" id="end-index" min="1" max="100" placeholder="Đến số">
+            </div>
+            <small>Một Day có tối đa 100 từ</small>
+
+            <button id="btn-start" class="btn-primary">BẮT ĐẦU HỌC</button>
+        </div>
+    </div>
+
+    <div id="flashcard-screen" class="screen">
+        <div class="header">
+            <button id="btn-back" class="btn-ghost">⬅ Cài đặt</button>
+            <span id="progress-text">0/0</span>
+        </div>
+
+        <div class="flashcard-container">
+            <div id="flashcard" class="flashcard">
+                <div class="card-face front">
+                    <div id="card-id" class="badge">Day #</div>
+                    <h2 id="card-word">Word</h2>
+                    <p id="card-pos" class="pos-text">(pos)</p>
+                    <button id="btn-speak" class="btn-icon">🔊</button>
+                    <p class="hint-text">Chạm để lật thẻ</p>
+                </div>
+                <div class="card-face back">
+                    <p id="card-ipa" class="ipa-text">/ipa/</p>
+                    <h3 id="card-meaning">Ý nghĩa</h3>
+                    <div id="card-examples" class="examples-box"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="btn-prev" class="btn-nav">◀ Trước</button>
+            <button id="btn-next" class="btn-nav">Tiếp ▶</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
